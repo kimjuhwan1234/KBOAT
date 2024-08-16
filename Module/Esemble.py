@@ -26,7 +26,7 @@ class Esemble:
         bst.fit(self.X_train, self.y_train)
         y_pred = bst.predict_proba(self.X_test)
         predictions = y_pred.argmax(axis=1)
-        accuracy = f1_score(self.y_test, predictions, average='binary')
+        accuracy = f1_score(self.y_test, predictions, average='weighted')
 
         # joblib.dump(bst, f'File/dt_{self.name}_model.pkl')
         print("DT F1-Score:", accuracy)
@@ -36,7 +36,7 @@ class Esemble:
         bst = LGBMClassifier(**params, n_estimators=self.num_rounds, verbose_eval=100)
         bst.fit(self.X_train, self.y_train, eval_set=[(self.X_test, self.y_test)])
         y_pred = bst.predict(self.X_test)
-        accuracy = f1_score(self.y_test, y_pred, average='binary')
+        accuracy = f1_score(self.y_test, y_pred, average='weighted')
 
         # joblib.dump(bst, f'File/lgb_{self.name}_model.pkl')
         print("lightGBM F1-Score:", accuracy)
@@ -46,7 +46,7 @@ class Esemble:
         bst = XGBClassifier(**params, n_estimators=self.num_rounds)
         bst.fit(self.X_train, self.y_train, eval_set=[(self.X_test, self.y_test)], verbose=100)
         y_pred = bst.predict(self.X_test)
-        accuracy = f1_score(self.y_test, y_pred, average='binary')
+        accuracy = f1_score(self.y_test, y_pred, average='weighted')
 
         # joblib.dump(bst, f'File/xgb_{self.name}_model.pkl')
         print("XGBoost F1-Score:", accuracy)
@@ -56,7 +56,7 @@ class Esemble:
         bst = CatBoostClassifier(**params, iterations=self.num_rounds)
         bst.fit(self.X_train, self.y_train, eval_set=[(self.X_test, self.y_test)], verbose=100)
         y_pred = bst.predict(self.X_test)
-        accuracy = f1_score(self.y_test, y_pred, average='binary')
+        accuracy = f1_score(self.y_test, y_pred, average='weighted')
 
         # joblib.dump(bst, f'File/cat_{self.name}_model.pkl')
         print("CatBoost F1-Score:", accuracy)
@@ -74,8 +74,10 @@ class Esemble:
         if self.method == 1:
             params = {
                 'device': 'cpu',
-                'objective': 'binary',
-                'metric': 'cross_entropy',
+                'objective': 'multiclass',
+                'eval_metric': 'multi_logloss',
+                'tree_learner': 'voting',
+                'num_class': 4,
                 'boosting_type': 'goss',
                 'early_stopping_rounds': 128,
 
@@ -88,8 +90,9 @@ class Esemble:
         if self.method == 2:
             params = {
                 'device': 'cuda',
-                'objective': 'binary:logistic',
-                'eval_metric': 'logloss',
+                'num_class': 4,
+                'objective': 'multi:softprob',
+                'eval_metric': 'mlogloss',
                 'booster': 'gbtree',
                 'early_stopping_rounds': 128,
 
@@ -102,8 +105,9 @@ class Esemble:
         if self.method == 3:
             params = {
                 'task_type': 'CPU',
-                'loss_function': 'Logloss',
-                'eval_metric': 'F1',
+                'classes_count': 4,
+                'loss_function': 'MultiClass',
+                'eval_metric': 'MultiClass',
                 'grow_policy': 'Depthwise',
                 'early_stopping_rounds': 128,
 
@@ -125,15 +129,17 @@ class Esemble:
             bst.fit(self.X_train, self.y_train)
             joblib.dump(bst, f'File/dt_{self.name}_model.pkl')
             self.save_dict_to_txt(f'File/dt_{self.name}_params.txt', best_params)
-            print(f'{f1_score(self.y_test, bst.predict(self.X_test), average="binary"):.4f}')
+            print(f'{f1_score(self.y_test, bst.predict(self.X_test), average="weighted"):.4f}')
             print("Model saved!")
 
         if self.method == 1:
             best_params.update({
                 'device': 'cpu',
-                'objective': 'binary',
-                'metric': 'cross_entropy',
-                'boosting_type': 'gbrt',
+                'objective': 'multiclass',
+                'eval_metric': 'multi_logloss',
+                'tree_learner': 'voting',
+                'num_class': 4,
+                'boosting_type': 'goss',
                 'early_stopping_rounds': 128,
             })
 
@@ -141,14 +147,15 @@ class Esemble:
             bst.fit(self.X_train, self.y_train, eval_set=[(self.X_test, self.y_test)])
             joblib.dump(bst, f'File/lgb_{self.name}_model.pkl')
             self.save_dict_to_txt(f'File/lgb_{self.name}_params.txt', best_params)
-            print(f'{f1_score(self.y_test, bst.predict(self.X_test), average="binary"):.4f}')
+            print(f'{f1_score(self.y_test, bst.predict(self.X_test), average="weighted"):.4f}')
             print("Model saved!")
 
         if self.method == 2:
             best_params.update({
                 'device': 'cuda',
-                'objective': 'binary:logistic',
-                'eval_metric': 'logloss',
+                'num_class': 4,
+                'objective': 'multi:softprob',
+                'eval_metric': 'mlogloss',
                 'booster': 'gbtree',
                 'early_stopping_rounds': 128,
             })
@@ -157,14 +164,15 @@ class Esemble:
             bst.fit(self.X_train, self.y_train, eval_set=[(self.X_test, self.y_test)], verbose=100)
             joblib.dump(bst, f'File/xgb_{self.name}_model.pkl')
             self.save_dict_to_txt(f'File/xgb_{self.name}_params.txt', best_params)
-            print(f'{f1_score(self.y_test, bst.predict(self.X_test), average="binary"):.4f}')
+            print(f'{f1_score(self.y_test, bst.predict(self.X_test), average="weighted"):.4f}')
             print("Model saved!")
 
         if self.method == 3:
             best_params.update({
                 'task_type': 'CPU',
-                'loss_function': 'CrossEntropy',
-                'eval_metric': 'F1',
+                'classes_count': 4,
+                'loss_function': 'MultiClass',
+                'eval_metric': 'MultiClass',
                 'grow_policy': 'Depthwise',
                 'early_stopping_rounds': 128,
             })
@@ -173,5 +181,5 @@ class Esemble:
             bst.fit(self.X_train, self.y_train, eval_set=[(self.X_test, self.y_test)], verbose=100)
             joblib.dump(bst, f'File/cat_{self.name}_model.pkl')
             self.save_dict_to_txt(f'File/cat_{self.name}_params.txt', best_params)
-            print(f'{f1_score(self.y_test, bst.predict(self.X_test), average="binary"):.4f}')
+            print(f'{f1_score(self.y_test, bst.predict(self.X_test), average="weighted"):.4f}')
             print("Model saved!")
