@@ -16,7 +16,8 @@ if __name__ == "__main__":
             data_dict[i[:-3]] = f[i[:-3]][:]
         print(data_dict[i[:-3]].shape)
 
-    for i in range(3, 4):
+    for i in range(0, 2):
+        # XGB랑 CAT에서는 멀티클래스 멀티아웃풋 안되는듯...?
         # {DT=0, lightGBM=1, XGBoost=2, CatBoost=3}
         E = Esemble(i, data_dict['X_train_norm'].reshape(data_dict['X_train_norm'].shape[0], -1),
                     data_dict['X_val_norm'].reshape(data_dict['X_val_norm'].shape[0], -1),
